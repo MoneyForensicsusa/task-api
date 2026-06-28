@@ -1,0 +1,47 @@
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, Field
+
+import psycopg2, os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+app = FastAPI()
+
+#Defining the Task model
+class Task(BaseModel):
+    title: str
+    description: str
+    priority: int = Field(ge=1, le=5)
+
+#Defining class for status update
+class StatusUpdate(BaseModel):
+    status: Literal['pending', 'in_progress', 'done']
+
+#connectiong to db
+def get_db():
+    return psycopg2.connect(
+        host=os.getenv('DB_HOST'),
+        dbname=os.getenv('DB_NAME'),
+        user=os.getenv('DB_USER'),
+        password=os.getenv('DB_PASSWORD')
+    )
+
+#async route to post a task
+@app.post('/tasks/', status_code=201)
+async def post_task(task: Task):
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("INSERT INTO tasks (title, description, priority) VALUES (%s, %s, %s) RETURNING ID", 
+            (task.title, task.description, task.priority))
+            new_id = cursor.fetchone()[0]
+            conn.commit()
+        return {
+            "id": new_id,
+            "title": task.title,
+            "description": task.description,
+            "priority": task.priority
+        }
+    except psycopg2.OperationalError as e:
+        raise HTTPException(status_code=500, detail=str(e))
