@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
+from typing import Literal
 
 import psycopg2, os
 from dotenv import load_dotenv
@@ -47,6 +48,7 @@ async def post_task(task: Task):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
 #async route for deleting a task
 @app.delete('/tasks/{task_id}')
 async def delete_task(task_id: int):
@@ -61,6 +63,30 @@ async def delete_task(task_id: int):
         return {'message': f'Task {task_id} has been deleted'}
     except psycopg2.OperationalError as e:
         raise HTTPException(status_code=500, detail=str(e)) 
+
+#async route to PATCH status for task
+@app.patch('/tasks/{task_id}/status')
+async def patch_status(task_id: int, update: StatusUpdate):
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE tasks SET status = %s WHERE id = %s RETURNING id, title, description, status, priority",
+            (update.status, task_id))
+            row = cursor.fetchone()
+            if row is None:
+                raise HTTPException(status_code=404, detail='task not found')
+            updated_status = row[3]
+            conn.commit()
+        return {
+            'message': f"Task {task_id} has been updated to {updated_status}",
+            'id': task_id,
+            'title': row[1],
+            'description': row[2],
+            'status': updated_status,
+            'priority': row[4]
+        }
+    except psycopg2.OperationalError as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 #async route to GET a task
 @app.get('/tasks/{task_id}')
@@ -82,4 +108,5 @@ async def get_task(task_id: int):
         }
     except psycopg2.OperationalError as e:
         raise HTTPException(status_code=500, detail=str(e))
-        
+
+
