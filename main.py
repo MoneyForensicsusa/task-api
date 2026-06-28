@@ -45,3 +45,20 @@ async def post_task(task: Task):
         }
     except psycopg2.OperationalError as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+#async route for deleting a task
+@app.delete('/tasks/{task_id}')
+async def delete_task(task_id: int):
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM tasks WHERE id = %s",
+            (task_id,))
+            if cursor.rowcount == 0:
+                raise HTTPException(status_code=404, detail="task not found")
+            conn.commit()
+        return {'message': f'Task {task_id} has been deleted'}
+    except psycopg2.OperationalError as e:
+        raise HTTPException(status_code=500, detail=str(e)) 
+
