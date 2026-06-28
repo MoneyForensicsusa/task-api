@@ -11,3 +11,11 @@ def test_post_task(test_task):
     assert data['title'] == "Review ALINEDS Proposal"
     assert data['description'] == "Review and finalize the Texas DIR ITSAC staff augmentation proposal before submission deadline"
     assert data['priority'] == 2
+
+#Test for DELETE route
+def test_delete_task(test_task):
+    task_id = test_task.json()['id']
+    response = client.delete(f'/tasks/{task_id}')
+    assert test_task.status_code == 200
+    recall = client.get(f'/tasks/{task_id}')
+    assert recall.status_code == 404

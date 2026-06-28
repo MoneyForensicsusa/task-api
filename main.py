@@ -62,3 +62,24 @@ async def delete_task(task_id: int):
     except psycopg2.OperationalError as e:
         raise HTTPException(status_code=500, detail=str(e)) 
 
+#async route to GET a task
+@app.get('/tasks/{task_id}')
+async def get_task(task_id: int):
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, title, description, status, priority FROM tasks WHERE id = %s",
+            (task_id,))
+            row = cursor.fetchone()
+            if row is None:
+                raise HTTPException(status_code=404, detail='Task not found')
+        return {
+            "id": row[0],
+            "title": row[1],
+            "description": row[2],
+            "status": row[3],
+            "priority": row[4]
+        }
+    except psycopg2.OperationalError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+        
