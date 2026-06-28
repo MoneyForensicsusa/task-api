@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 from main import app
 
-cleint = TestClient(app)
+client = TestClient(app)
 
 #Test for POST route
 def test_post_task(test_task):
@@ -16,6 +16,6 @@ def test_post_task(test_task):
 def test_delete_task(test_task):
     task_id = test_task.json()['id']
     response = client.delete(f'/tasks/{task_id}')
-    assert test_task.status_code == 200
+    assert response.status_code == 200
     recall = client.get(f'/tasks/{task_id}')
     assert recall.status_code == 404
