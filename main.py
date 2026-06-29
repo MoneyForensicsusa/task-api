@@ -28,6 +28,30 @@ def get_db():
         password=os.getenv('DB_PASSWORD')
     )
 
+#async route to get tasks stats
+@app.get('/tasks/stats')
+async def get_tasks_stats():
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT
+                    COUNT(*) AS total,
+                    COUNT(*) FILTER (WHERE status = 'pending') AS pending,
+                    COUNT(*) FILTER (WHERE status = 'in_progress') AS in_progress,
+                    COUNT(*) FILTER (WHERE status = 'done') AS done
+                FROM tasks
+            """)
+            row = cursor.fetchone()
+        return {
+            "total": row[0],
+            "pending": row[1],
+            "in_progress": row[2],
+            "done": row[3]
+        }
+    except psycopg2.OperationalError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 #async route to post a task
 @app.post('/tasks/', status_code=201)
 async def post_task(task: Task):
@@ -108,5 +132,4 @@ async def get_task(task_id: int):
         }
     except psycopg2.OperationalError as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
