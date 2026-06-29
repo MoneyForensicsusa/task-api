@@ -43,3 +43,45 @@ def test_patch_invalid_status(test_task):
     task_id = test_task.json()['id']
     response = client.patch(f'/tasks/{task_id}/status', json={'status': 'bannana'})
     assert response.status_code == 422
+
+#Test for GET tasks stats route
+def test_task_stats():
+    data = [
+        {
+            "title": "Review Q3 Budget Report",
+            "description": "Analyze and summarize the Q3 financial report for stakeholder presentation",
+            "priority": 2
+        },
+        {
+            "title": "Update Security Compliance Documentation",
+            "description": "Review and update NIST CSF compliance docs before annual audit deadline",
+            "priority": 1
+        },
+        {
+            "title": "Onboard New Team Member",
+            "description": "Prepare onboarding materials and schedule orientation sessions for new hire",
+            "priority": 3
+        }
+    ]
+    ids =[]
+    for d in data:
+        response = client.post('/tasks', json=d)
+        ids.append(response.json()['id'])
+    # patch one of the task status
+    task_id = ids[2]
+    patched = client.patch(f'/tasks/{task_id}/status', json={'status': 'done'})
+    #get the stats and assert
+    stats_response = client.get('/tasks/stats')
+    assert stats_response.status_code == 200
+    stats = stats_response.json()
+    assert stats['total'] >= 3
+    assert stats['pending'] >= 2
+    assert stats['done'] >= 1
+    #cleanup
+    for id in ids:
+        client.delete(f'/tasks/{id}')
+
+
+
+
+    
