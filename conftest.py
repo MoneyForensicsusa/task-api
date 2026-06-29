@@ -9,7 +9,8 @@ def test_task():
     data = {
         'title': "Review ALINEDS Proposal",
         'description': "Review and finalize the Texas DIR ITSAC staff augmentation proposal before submission deadline",
-        "priority": 2
+        "priority": 2,
+        "due_date": "2025-01-01T00:00:00"
     }
     response = client.post('/tasks', json=data)
     yield response

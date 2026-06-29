@@ -92,4 +92,11 @@ def test_priority_level(test_task):
     assert data[0]["priority"] == level
 
 
-    
+#Test for task overdue route
+def test_get_overdue_tasks(test_task):
+    response = client.get('/tasks/overdue')
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) > 0
+    assert any(d["id"] == test_task.json()["id"] for d in data)
