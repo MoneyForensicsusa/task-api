@@ -81,7 +81,15 @@ def test_task_stats():
     for id in ids:
         client.delete(f'/tasks/{id}')
 
-
+#Test for priority level route
+def test_priority_level(test_task):
+    level = test_task.json()['priority']
+    response = client.get(f'/tasks/priority/{level}')
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) > 0
+    assert data[0]["priority"] == level
 
 
     

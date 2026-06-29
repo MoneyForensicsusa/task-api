@@ -133,3 +133,26 @@ async def get_task(task_id: int):
     except psycopg2.OperationalError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+#async route to get tasks based on priority level
+@app.get('/tasks/priority/{level}')
+async def get_tasks_priority_level(level: int):
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, title, description, status, priority FROM tasks WHERE priority = %s",
+            (level,))
+            rows = cursor.fetchall()
+            if not rows:
+                raise HTTPException(status_code=404, detail="tasks with that priority dont exist")
+            data = []
+            for row in rows:
+                data.append({
+                    "id": row[0],
+                    "title": row[1],
+                    "description": row[2],
+                    'status': row[3],
+                    "priority": row[4]
+                })
+        return data
+    except psycopg2.OperationalError as e:
+        raise HTTPException(status_code=500, detail=str(e))
