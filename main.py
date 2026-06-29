@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
-from typing import Literal
+from typing import Literal, List, Optional
 from datetime import datetime
+
 
 import psycopg2, os
 from dotenv import load_dotenv
@@ -19,6 +20,11 @@ class Task(BaseModel):
 
 #Defining class for status update
 class StatusUpdate(BaseModel):
+    status: Literal['pending', 'in_progress', 'done']
+
+#Defining class for Bulkstatus update
+class BulkStatusUpdate(BaseModel):
+    ids: List[int]
     status: Literal['pending', 'in_progress', 'done']
 
 #connectiong to db
@@ -53,6 +59,34 @@ async def get_tasks_stats():
         }
     except psycopg2.OperationalError as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# async route that accepts lists of task ids and patches the status
+@app.patch('/tasks/bulk-status')
+async def patch_tasks_status(update: BulkStatusUpdate):
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE tasks SET status = %s WHERE id = ANY(%s) RETURNING id, title, status",
+            (update.status, update.ids))
+            if cursor.rowcount == 0:
+                raise HTTPException(status_code=500, detail='No tasks found with those ids')
+            rows = cursor.fetchall()
+            conn.commit()
+            data = []
+            for row in rows:
+                data.append({
+                    "id": row[0],
+                    "title": row[1],
+                    "status": row[2]
+                })
+        return {
+            'message': f"{len(data)} tasks updated to {update.status}",
+            "updated_tasks": data
+        }
+    except psycopg2.OperationalError as e:
+        raise HTTPException(status_code=500, detail=str(e))  
+
 
 
 # async route to get tasks per due date
