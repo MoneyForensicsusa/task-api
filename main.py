@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from typing import Literal
+from datetime import datetime
 
 import psycopg2, os
 from dotenv import load_dotenv
@@ -14,6 +15,7 @@ class Task(BaseModel):
     title: str
     description: str
     priority: int = Field(ge=1, le=5)
+    due_date: datetime = None
 
 #Defining class for status update
 class StatusUpdate(BaseModel):
@@ -52,14 +54,38 @@ async def get_tasks_stats():
     except psycopg2.OperationalError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# async route to get tasks per due date
+@app.get('/tasks/overdue')
+async def get_tasks_overdue():
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, title, description, status, priority, due_date FROM tasks WHERE due_date < NOW() AND status != 'done' AND due_date IS NOT NULL")
+            rows = cursor.fetchall()
+            data = []
+            for row in rows:
+                data.append({
+                    'id': row[0],
+                    'title': row[1],
+                    'description': row[2],
+                    'status': row[3],
+                    'priority': row[4],
+                    'due_date': row[5]
+                })
+        return data
+    except psycopg2.OperationalError as e:
+        raise HTTPException (status_code=500, detail=str(e))
+
+
 #async route to post a task
 @app.post('/tasks/', status_code=201)
 async def post_task(task: Task):
     try:
         with get_db() as conn:
             cursor = conn.cursor()
-            cursor.execute("INSERT INTO tasks (title, description, priority) VALUES (%s, %s, %s) RETURNING ID", 
-            (task.title, task.description, task.priority))
+            cursor.execute("INSERT INTO tasks (title, description, priority, due_date) VALUES (%s, %s, %s, %s) RETURNING id", 
+            (task.title, task.description, task.priority, task.due_date))
             new_id = cursor.fetchone()[0]
             conn.commit()
         return {
@@ -156,3 +182,4 @@ async def get_tasks_priority_level(level: int):
         return data
     except psycopg2.OperationalError as e:
         raise HTTPException(status_code=500, detail=str(e))
+
