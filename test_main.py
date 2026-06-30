@@ -100,3 +100,13 @@ def test_get_overdue_tasks(test_task):
     assert isinstance(data, list)
     assert len(data) > 0
     assert any(d["id"] == test_task.json()["id"] for d in data)
+
+#Test for bulk status update
+def test_bulk_status_update(test_task):
+    task_id = test_task.json()['id']
+    response = client.patch('/tasks/bulk-status', json={'ids': [task_id], 'status': 'done'})
+    assert response.status_code == 200
+    data = response.json()
+    assert data['message'] == f'1 tasks updated to done'
+    assert len(data['updated_tasks']) == 1
+    assert data['updated_tasks'][0]['status'] == 'done'
